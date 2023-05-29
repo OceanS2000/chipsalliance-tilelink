@@ -23,26 +23,26 @@ namespace {
 }
 
 class Slave : public sparta::Unit {
-  friend Simulator;
 public:
-  struct Parameters : sparta::ParameterSet {
-    using sparta::ParameterSet::ParameterSet;
+  class SlaveParameters : sparta::ParameterSet {
     PARAMETER(uint64_t, seed, 0x19260817, "Seed for generating data")
     PARAMETER(uint64_t, id, 0, "Slave id")
   };
 
   Slave(sparta::TreeNode *node, const Parameters *params);
+
   static const char *name;
 
 private:
-  std::unique_ptr<TLBundleSink<>> port;
+  TLBundleSink<> port{&unit_port_set_};
+
   sparta::UniqueEvent<> next_d {
     &unit_event_set_, "next_d",
     CREATE_SPARTA_HANDLER(Slave, send_d),
     0 // Slaves immediately respond
   };
 
-  const Parameters *params;
+  uint64_t id;
 
   RandGen gen_d;
   std::uniform_int_distribution<uint64_t> dist_d;

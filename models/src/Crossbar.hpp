@@ -4,14 +4,16 @@
 #include <initializer_list>
 #include <limits>
 #include <optional>
-#include <sparta/simulation/TreeNode.hpp>
 #include <string_view>
 
-#include "Link.hpp"
+#include "sparta/simulation/TreeNode.hpp"
 #include "sparta/simulation/Unit.hpp"
 #include "sparta/ports/DataPort.hpp"
 #include "sparta/ports/SignalPort.hpp"
 #include "sparta/simulation/ParameterSet.hpp"
+
+#include "Link.hpp"
+#include "Type.hpp"
 
 struct SinkBundle;
 struct SourceBundle;
