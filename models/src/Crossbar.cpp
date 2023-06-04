@@ -72,7 +72,7 @@ std::optional<std::size_t> AddressDecoder::decode(std::size_t input) const {
 struct SinkBundle {
   std::size_t idx;
   Crossbar *parent;
-  std::unique_ptr<TLBundleSink<>> port;
+  TLBundleSink<> port;
 
   std::vector<std::size_t> reachable_downstream;
   std::vector<std::optional<std::size_t>> reachable_downstream_inv;
@@ -97,22 +97,20 @@ struct SinkBundle {
         reachable_downstream_inv(reachable_downstream_inv),
         downstream_ids(source_sizes), b_arb(reachable_downstream.size()),
         d_arb(reachable_downstream.size()),
-        port(std::make_unique<TLBundleSink<>>(
-            parent->self, "sink_" + std::to_string(idx),
-            "Sink at " + std::to_string(idx))) {
-    port->a.data.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(
+        port{&parent->unit_port_set_} {
+    port.a.data.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(
       SinkBundle, data_a, TLABMsg<>
     ));
-    port->c.data.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(
+    port.c.data.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(
       SinkBundle, data_c, TLCMsg<>
     ));
-    port->e.data.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(
+    port.e.data.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(
       SinkBundle, data_e, TLEMsg<>
     ));
-    port->b.accept.registerConsumerHandler(CREATE_SPARTA_HANDLER(
+    port.b.accept.registerConsumerHandler(CREATE_SPARTA_HANDLER(
       SinkBundle, accept_b
     ));
-    port->d.accept.registerConsumerHandler(CREATE_SPARTA_HANDLER(
+    port.d.accept.registerConsumerHandler(CREATE_SPARTA_HANDLER(
       SinkBundle, accept_d
     ));
   }
@@ -131,7 +129,7 @@ struct SinkBundle {
 struct SourceBundle {
   std::size_t idx;
   Crossbar *parent;
-  std::unique_ptr<TLBundleSource<>> port;
+  TLBundleSource<> port;
 
   std::vector<std::size_t> reachable_upstream;
   std::vector<std::optional<std::size_t>> reachable_upstream_inv;
@@ -160,22 +158,20 @@ struct SourceBundle {
         reachable_upstream_inv(reachable_upstream_inv),
         upstream_ids(sink_sizes), a_arb(reachable_upstream.size()),
         c_arb(reachable_upstream.size()), e_arb(reachable_upstream.size()),
-        port(std::make_unique<TLBundleSource<>>(
-            parent->self, "source_" + std::to_string(idx),
-            "Source at " + std::to_string(idx))) {
-    port->b.data.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(
+        port{&parent->unit_port_set_} {
+    port.b.data.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(
       SourceBundle, data_b, TLABMsg<>
     ));
-    port->d.data.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(
+    port.d.data.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(
       SourceBundle, data_d, TLDMsg<>
     ));
-    port->a.accept.registerConsumerHandler(CREATE_SPARTA_HANDLER(
+    port.a.accept.registerConsumerHandler(CREATE_SPARTA_HANDLER(
       SourceBundle, accept_a
     ));
-    port->c.accept.registerConsumerHandler(CREATE_SPARTA_HANDLER(
+    port.c.accept.registerConsumerHandler(CREATE_SPARTA_HANDLER(
       SourceBundle, accept_c
     ));
-    port->e.accept.registerConsumerHandler(CREATE_SPARTA_HANDLER(
+    port.e.accept.registerConsumerHandler(CREATE_SPARTA_HANDLER(
       SourceBundle, accept_e
     ));
   }
@@ -239,14 +235,14 @@ void SinkBundle::data_e(const TLEMsg<> &msg) {
 
 void SinkBundle::accept_b() {
   auto downstream = b_arb.accept();
-  parent->sources_[downstream]->port->b.accept.send();
+  parent->sources_[downstream]->port.b.accept.send();
 
   next_b();
 }
 
 void SinkBundle::accept_d() {
   auto downstream = d_arb.accept();
-  parent->sources_[downstream]->port->d.accept.send();
+  parent->sources_[downstream]->port.d.accept.send();
 
   next_d();
 }
@@ -254,13 +250,13 @@ void SinkBundle::accept_d() {
 void SinkBundle::next_b() {
   if(b_arb.no_outstanding())
     if(auto next = b_arb.next())
-      port->b.data.send(*next);
+      port.b.data.send(*next);
 }
 
 void SinkBundle::next_d() {
   if(d_arb.no_outstanding())
     if(auto next = d_arb.next())
-      port->d.data.send(*next);
+      port.d.data.send(*next);
 }
 
 void SourceBundle::data_b(const TLABMsg<> &msg) {
@@ -292,21 +288,21 @@ void SourceBundle::data_d(const TLDMsg<> &msg) {
 
 void SourceBundle::accept_a() {
   auto upstream = a_arb.accept();
-  parent->sinks_[upstream]->port->a.accept.send();
+  parent->sinks_[upstream]->port.a.accept.send();
 
   next_a();
 }
 
 void SourceBundle::accept_c() {
   auto upstream = c_arb.accept();
-  parent->sinks_[upstream]->port->c.accept.send();
+  parent->sinks_[upstream]->port.c.accept.send();
 
   next_c();
 }
 
 void SourceBundle::accept_e() {
   auto upstream = e_arb.accept();
-  parent->sinks_[upstream]->port->e.accept.send();
+  parent->sinks_[upstream]->port.e.accept.send();
 
   next_e();
 }
@@ -314,34 +310,33 @@ void SourceBundle::accept_e() {
 void SourceBundle::next_a() {
   if(a_arb.no_outstanding())
     if(auto next = a_arb.next())
-      port->a.data.send(*next);
+      port.a.data.send(*next);
 }
 
 void SourceBundle::next_c() {
   if(c_arb.no_outstanding())
     if(auto next = c_arb.next())
-      port->c.data.send(*next);
+      port.c.data.send(*next);
 }
 
 void SourceBundle::next_e() {
   if(e_arb.no_outstanding())
     if(auto next = e_arb.next())
-      port->e.data.send(*next);
+      port.e.data.send(*next);
 }
 
-Crossbar::Crossbar(sparta::TreeNode *node, const Parameters *params) :
-  sparta::Unit(node, name),
-  self(node),
-  params_(params) {
+Crossbar::Crossbar(sparta::TreeNode *node, const CrossbarParameterSet *params) 
+  : sparta::Unit(node)
+  {
     // TODO: validate parameter dimensions
     // TODO: validate ID widths
 
-    sinks_.reserve(params_->sinks);
-    sources_.reserve(params_->sources);
+    sinks_.reserve(params->sinks);
+    sources_.reserve(params->sources);
 
     // Populate router
-    for(std::size_t i = 0; i < params_->sources; ++i) {
-      auto &range = params_->ranges.getValue()[i];
+    for(std::size_t i = 0; i < params->sources; ++i) {
+      auto &range = params->ranges.getValue()[i];
       // TODO: validator
       routing_.add(i, std::make_pair(
         range[0],
@@ -350,13 +345,13 @@ Crossbar::Crossbar(sparta::TreeNode *node, const Parameters *params) :
     }
 
     // Construct bundles
-    for(std::size_t i = 0; i < params_->sinks; ++i) {
-      std::vector<std::optional<std::size_t>> source_sizes(params_->sources);
+    for(std::size_t i = 0; i < params->sinks; ++i) {
+      std::vector<std::optional<std::size_t>> source_sizes(params->sources);
       std::vector<std::size_t> reachable_downstream;
-      std::vector<std::optional<std::size_t>> reachable_downstream_inv(params_->sources);
-      for(std::size_t j = 0; j < params_->sources; ++j) {
-        if(params_->connectivity.getValue()[i][j]) {
-          source_sizes[j] = params_->downstream_sizes.getValue()[j];
+      std::vector<std::optional<std::size_t>> reachable_downstream_inv(params->sources);
+      for(std::size_t j = 0; j < params->sources; ++j) {
+        if(params->connectivity.getValue()[i][j]) {
+          source_sizes[j] = params->downstream_sizes.getValue()[j];
           reachable_downstream.push_back(j);
           reachable_downstream_inv[j] = reachable_downstream.size() - 1;
         }
@@ -366,14 +361,14 @@ Crossbar::Crossbar(sparta::TreeNode *node, const Parameters *params) :
       ));
     }
 
-    for(std::size_t i = 0; i < params_->sources; ++i) {
-      std::vector<std::optional<std::size_t>> sink_sizes(params_->sinks);
+    for(std::size_t i = 0; i < params->sources; ++i) {
+      std::vector<std::optional<std::size_t>> sink_sizes(params->sinks);
       std::vector<std::size_t> reachable_upstream;
-      std::vector<std::optional<std::size_t>> reachable_upstream_inv(params_->sinks);
+      std::vector<std::optional<std::size_t>> reachable_upstream_inv(params->sinks);
 
-      for(std::size_t j = 0; j < params_->sinks; ++j) {
-        if(params_->connectivity.getValue()[j][i]) {
-          sink_sizes[j] = params_->upstream_sizes.getValue()[j];
+      for(std::size_t j = 0; j < params->sinks; ++j) {
+        if(params->connectivity.getValue()[j][i]) {
+          sink_sizes[j] = params->upstream_sizes.getValue()[j];
           reachable_upstream.push_back(j);
           reachable_upstream_inv[j] = reachable_upstream.size() - 1;
         } else {
@@ -388,8 +383,8 @@ Crossbar::Crossbar(sparta::TreeNode *node, const Parameters *params) :
   }
 
 void Crossbar::bind_sink(std::size_t idx, TLBundleSource<> &src) {
-  this->sinks_[idx]->port->bind(src);
+  this->sinks_[idx]->port.bind(src);
 }
 void Crossbar::bind_src(std::size_t idx, TLBundleSink<> &sink) {
-  this->sources_[idx]->port->bind(sink);
+  this->sources_[idx]->port.bind(sink);
 }

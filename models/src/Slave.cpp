@@ -6,7 +6,7 @@
 
 const char *Slave::name = "slave";
 
-Slave::Slave(sparta::TreeNode *node, const Parameters *params)
+Slave::Slave(sparta::TreeNode *node, const SlaveParameterSet *params)
   : sparta::Unit(node)
   , dist_d(std::numeric_limits<uint64_t>::min(), std::numeric_limits<uint64_t>::max())
 {
@@ -61,7 +61,7 @@ void Slave::send_d() {
   };
   GlobalLogger::put_json(
       std::string("slave_") + std::to_string(id) + ".d.propose", ev);
-  port->d.data.send(msg);
+  port.d.data.send(msg);
 }
 
 void Slave::data_a(const TLABMsg<> &msg) {
@@ -90,6 +90,6 @@ void Slave::sched_req() {
   GlobalLogger::put(std::string("slave_") + std::to_string(id) +
                         ".a.accept",
                     std::to_string(this->getClock()->currentCycle()));
-  port->a.accept.send();
+  port.a.accept.send();
   next_d.schedule();
 }

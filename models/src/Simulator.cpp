@@ -3,9 +3,9 @@
 #include "Slave.hpp"
 #include "Crossbar.hpp"
 
-using MasterFactory = sparta::ResourceFactory<Master, Master::Parameters>;
-using SlaveFactory = sparta::ResourceFactory<Slave, Slave::Parameters>;
-using CrossbarFactory = sparta::ResourceFactory<Crossbar, Crossbar::Parameters>;
+using MasterFactory = sparta::ResourceFactory<Master, Master::MasterParameterSet>;
+using SlaveFactory = sparta::ResourceFactory<Slave, Slave::SlaveParameterSet>;
+using CrossbarFactory = sparta::ResourceFactory<Crossbar, Crossbar::CrossbarParameterSet>;
 
 Simulator::Simulator(sparta::Scheduler &scheduler)
   : sparta::app::Simulation("tlmodel", &scheduler) {
@@ -27,7 +27,7 @@ void Simulator::buildTree_() {
       getResourceSet()->getResourceFactory(Crossbar::name));
   to_delete_.emplace_back(crossbar);
 
-  auto params = dynamic_cast<Crossbar::Parameters *>(crossbar->getParameterSet());
+  auto params = dynamic_cast<Crossbar::CrossbarParameterSet *>(crossbar->getParameterSet());
   sparta_assert(params != nullptr);
   auto master_cnt = params->sinks.getValue();
   auto slave_cnt = params->sources.getValue();
@@ -59,15 +59,13 @@ void Simulator::bindTree_() {
   sparta::TreeNode* root = getRoot();
 
   auto crossbar = root->getChild("crossbar")->getResourceAs<Crossbar>();
-  auto params = crossbar->params_;
-  auto master_cnt = params->sinks.getValue();
-  auto slave_cnt = params->sources.getValue();
-  for(size_t i = 0; i < master_cnt; ++i) {
+  
+  for(size_t i = 0; i < crossbar->get_sink_num(); ++i) {
     auto master = root->getChild("master_" + std::to_string(i))->getResourceAs<Master>();
-    crossbar->bind_sink(i, *master->port);
+    crossbar->bind_sink(i, *master->get_port());
   }
-  for(size_t i = 0; i < slave_cnt; ++i) {
+  for(size_t i = 0; i < crossbar->get_source_num(); ++i) {
     auto slave = root->getChild("slave_" + std::to_string(i))->getResourceAs<Slave>();
-    crossbar->bind_src(i, *slave->port);
+    crossbar->bind_src(i, *slave->get_port());
   }
 }

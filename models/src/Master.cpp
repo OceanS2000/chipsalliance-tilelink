@@ -7,7 +7,7 @@
 
 const char *Master::name = "master";
 
-Master::Master(sparta::TreeNode *node, const MasterParameters *params)
+Master::Master(sparta::TreeNode *node, const MasterParameterSet *params)
   : sparta::Unit(node)
   , dist_a_downstream(0, params->downstreams.getValue().size() - 1)
 {
@@ -31,7 +31,7 @@ Master::Master(sparta::TreeNode *node, const MasterParameters *params)
 
 void Master::accept_a() {
 
-  GlobalLogger::put(std::string("master_") + std::to_string(params->id) +
+  GlobalLogger::put(std::string("master_") + std::to_string(id) +
                         ".a.accepted",
                     std::to_string(this->getClock()->currentCycle()));
   next_a.schedule();
@@ -65,7 +65,7 @@ void Master::send_a() {
     .event = msg,
   };
   GlobalLogger::put_json(std::string("master_") + std::to_string(id) + ".a.propose", ev);
-  port->a.data.send(msg);
+  port.a.data.send(msg);
 }
 
 void Master::data_d(const TLDMsg<> &msg) {
@@ -81,5 +81,5 @@ void Master::grant_d() {
   GlobalLogger::put(std::string("master_") + std::to_string(id) +
                         ".d.accept",
                     std::to_string(this->getClock()->currentCycle()));
-  port->d.accept.send();
+  port.d.accept.send();
 }

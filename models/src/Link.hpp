@@ -20,8 +20,9 @@ struct TLBundleSource;
 template<HasSize Payload>
 struct TLChannelSink {
   sparta::PortSet *pset;
-  sparta::DataInPort<Payload> data{pset, "data" };
-  sparta::SignalOutPort accept{pset, "accept" };
+  std::string channel;
+  sparta::DataInPort<Payload> data{pset, channel + "_data_in" };
+  sparta::SignalOutPort accept{pset,  channel + "_ack_out" };
 
   void bind(TLChannelSource<Payload> &ano) {
     ano.bind(*this);
@@ -31,8 +32,9 @@ struct TLChannelSink {
 template<HasSize Payload>
 struct TLChannelSource{
   sparta::PortSet *pset;
-  sparta::DataOutPort<Payload> data{pset, "data" };
-  sparta::SignalInPort accept{pset, "accept" };
+  std::string channel;
+  sparta::DataOutPort<Payload> data{pset, channel + "_data_out" };
+  sparta::SignalInPort accept{pset, channel + "_ack_in" };
 
   void bind(TLChannelSink<Payload> &ano) {
     sparta::bind(data, ano.data);
@@ -43,11 +45,11 @@ struct TLChannelSource{
 template<typename Types = DefaultTypes>
 struct TLBundleSink {
   sparta::PortSet *pset;
-  TLChannelSink<TLABMsg<Types>> a{pset};
-  TLChannelSource<TLABMsg<Types>> b{pset};
-  TLChannelSink<TLCMsg<Types>> c{pset};
-  TLChannelSource<TLDMsg<Types>> d{pset};
-  TLChannelSink<TLEMsg<Types>> e{pset};
+  TLChannelSink<TLABMsg<Types>> a{pset, "a"};
+  TLChannelSource<TLABMsg<Types>> b{pset, "b"};
+  TLChannelSink<TLCMsg<Types>> c{pset, "c"};
+  TLChannelSource<TLDMsg<Types>> d{pset, "d"};
+  TLChannelSink<TLEMsg<Types>> e{pset, "e"};
 
   void bind(TLBundleSource<Types> &ano) {
     ano.bind(*this);
@@ -57,11 +59,11 @@ struct TLBundleSink {
 template<typename Types>
 struct TLBundleSource {
   sparta::PortSet *pset;
-  TLChannelSource<TLABMsg<Types>> a{pset};
-  TLChannelSink<TLABMsg<Types>> b{pset};
-  TLChannelSource<TLCMsg<Types>> c{pset};
-  TLChannelSink<TLDMsg<Types>> d{pset};
-  TLChannelSource<TLEMsg<Types>> e{pset};
+  TLChannelSource<TLABMsg<Types>> a{pset, "a"};
+  TLChannelSink<TLABMsg<Types>> b{pset, "b"};
+  TLChannelSource<TLCMsg<Types>> c{pset, "c"};
+  TLChannelSink<TLDMsg<Types>> d{pset, "d"};
+  TLChannelSource<TLEMsg<Types>> e{pset, "e"};
 
   void bind(TLBundleSink<Types> &ano) {
     a.bind(ano.a);

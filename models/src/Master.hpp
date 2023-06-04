@@ -17,18 +17,28 @@ class Simulator;
 
 class Master : public sparta::Unit {
 public:
-  class MasterParameters : public sparta::ParameterSet {
+  class MasterParameterSet : public sparta::ParameterSet {
+  public:
+    MasterParameterSet(sparta::TreeNode *n) :
+      sparta::ParameterSet(n)
+    {}
+
+    const AddrRanges default_range = {{0, 0x100000000}};
+
     PARAMETER(uint64_t, seed, 0x19260817, "Seed for generating data")
-    PARAMETER(AddrRanges, downstreams, {{0, 0x100000000}}, "Valid downstreams")
+    PARAMETER(AddrRanges, downstreams, default_range, "Valid downstreams")
     PARAMETER(uint64_t, id, 0, "Master id")
   };
 
-  Master(sparta::TreeNode *node, const MasterParameters *params);
+  Master(sparta::TreeNode *node, const MasterParameterSet *params);
 
   static const char *name;
 
+  TLBundleSource<>* get_port(){return &port;}
+  
 private:
   TLBundleSource<> port{&unit_port_set_};
+
   sparta::UniqueEvent<> next_a {
     &unit_event_set_, "next_a",
     CREATE_SPARTA_HANDLER(Master, send_a),
@@ -42,7 +52,7 @@ private:
   };
 
   RandGen gen_a;
-  uint64_t id = 0;
+  uint64_t id;
 
   std::uniform_int_distribution<size_t> dist_a_downstream;
   std::vector<std::uniform_int_distribution<uint64_t>> dist_a_addrs;
@@ -52,6 +62,7 @@ private:
   void accept_a();
   void data_d(const TLDMsg<> &msg);
   void grant_d();
+
 };
 
 #endif // __MASTER_H__

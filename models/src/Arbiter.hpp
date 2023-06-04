@@ -3,7 +3,7 @@
 
 #include <limits>
 #include <optional>
-#include <sparta/events/Event.hpp>
+#include "sparta/events/Event.hpp"
 #include <string_view>
 
 #include "Link.hpp"
