@@ -69,6 +69,9 @@ static const uint8_t tl_opcode_to_int(TLOpCode code) {
     return 1;
   case TLOpCode::AccessAck:
     return 0;
+  default:
+    sparta_assert(0, "unimplemented TLOpCode\n");
+    return 0x7f;
   }
 }
 

@@ -7,11 +7,9 @@
 
 const char *Master::name = "master";
 
-Master::Master(sparta::TreeNode *node, const Parameters *params)
-  : sparta::Unit(node, name)
-  , port(std::make_unique<TLBundleSource<>>(node, "port", "Master port"))
+Master::Master(sparta::TreeNode *node, const MasterParameterSet *params)
+  : sparta::Unit(node)
   , dist_a_downstream(0, params->downstreams.getValue().size() - 1)
-  , params(params)
 {
   std::mt19937 gen(params->seed);
   gen_a = RandGen(gen());
@@ -20,10 +18,12 @@ Master::Master(sparta::TreeNode *node, const Parameters *params)
   for(const auto &downstream : params->downstreams.getValue())
     dist_a_addrs.emplace_back(downstream[0], downstream[1] - 1);
 
-  port->a.accept.registerConsumerHandler(CREATE_SPARTA_HANDLER(Master, accept_a));
-  port->d.data.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Master, data_d, TLDMsg<>));
+  port.a.accept.registerConsumerHandler(CREATE_SPARTA_HANDLER(Master, accept_a));
+  port.d.data.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Master, data_d, TLDMsg<>));
 
   params->id.ignore();
+  
+  id = params->id;
 
   // Kickstart
   sparta::StartupEvent(node, CREATE_SPARTA_HANDLER(Master, send_a));
@@ -31,7 +31,7 @@ Master::Master(sparta::TreeNode *node, const Parameters *params)
 
 void Master::accept_a() {
 
-  GlobalLogger::put(std::string("master_") + std::to_string(params->id) +
+  GlobalLogger::put(std::string("master_") + std::to_string(id) +
                         ".a.accepted",
                     std::to_string(this->getClock()->currentCycle()));
   next_a.schedule();
@@ -64,8 +64,8 @@ void Master::send_a() {
     .at = this->getClock()->currentCycle(),
     .event = msg,
   };
-  GlobalLogger::put_json(std::string("master_") + std::to_string(params->id) + ".a.propose", ev);
-  port->a.data.send(msg);
+  GlobalLogger::put_json(std::string("master_") + std::to_string(id) + ".a.propose", ev);
+  port.a.data.send(msg);
 }
 
 void Master::data_d(const TLDMsg<> &msg) {
@@ -73,13 +73,13 @@ void Master::data_d(const TLDMsg<> &msg) {
     .at = this->getClock()->currentCycle(),
     .event = msg,
   };
-  GlobalLogger::put_json(std::string("master_") + std::to_string(params->id) + ".d.proposed", ev);
+  GlobalLogger::put_json(std::string("master_") + std::to_string(id) + ".d.proposed", ev);
   next_d.schedule();
 }
 
 void Master::grant_d() {
-  GlobalLogger::put(std::string("master_") + std::to_string(params->id) +
+  GlobalLogger::put(std::string("master_") + std::to_string(id) +
                         ".d.accept",
                     std::to_string(this->getClock()->currentCycle()));
-  port->d.accept.send();
+  port.d.accept.send();
 }

@@ -18,11 +18,11 @@ template<typename Types = DefaultTypes>
 struct TLBundleSource;
 
 template<HasSize Payload>
-struct TLChannelSink : sparta::TreeNode {
-  using sparta::TreeNode::TreeNode;
-  sparta::PortSet pset{ this, "Ports" };
-  sparta::DataInPort<Payload> data{ &pset, "data" };
-  sparta::SignalOutPort accept{ &pset, "accept" };
+struct TLChannelSink {
+  sparta::PortSet *pset;
+  std::string channel;
+  sparta::DataInPort<Payload> data{pset, channel + "_data_in" };
+  sparta::SignalOutPort accept{pset,  channel + "_ack_out" };
 
   void bind(TLChannelSource<Payload> &ano) {
     ano.bind(*this);
@@ -30,11 +30,11 @@ struct TLChannelSink : sparta::TreeNode {
 };
 
 template<HasSize Payload>
-struct TLChannelSource : sparta::TreeNode {
-  using sparta::TreeNode::TreeNode;
-  sparta::PortSet pset{ this, "Ports" };
-  sparta::DataOutPort<Payload> data{ &pset, "data" };
-  sparta::SignalInPort accept{ &pset, "accept" };
+struct TLChannelSource{
+  sparta::PortSet *pset;
+  std::string channel;
+  sparta::DataOutPort<Payload> data{pset, channel + "_data_out" };
+  sparta::SignalInPort accept{pset, channel + "_ack_in" };
 
   void bind(TLChannelSink<Payload> &ano) {
     sparta::bind(data, ano.data);
@@ -43,13 +43,13 @@ struct TLChannelSource : sparta::TreeNode {
 };
 
 template<typename Types = DefaultTypes>
-struct TLBundleSink : sparta::TreeNode {
-  using sparta::TreeNode::TreeNode;
-  TLChannelSink<TLABMsg<Types>> a{ this, "a", "A channel" };
-  TLChannelSource<TLABMsg<Types>> b{ this, "b", "B channel" };
-  TLChannelSink<TLCMsg<Types>> c{ this, "c", "C channel" };
-  TLChannelSource<TLDMsg<Types>> d{ this, "d", "D channel" };
-  TLChannelSink<TLEMsg<Types>> e{ this, "e", "E channel" };
+struct TLBundleSink {
+  sparta::PortSet *pset;
+  TLChannelSink<TLABMsg<Types>> a{pset, "a"};
+  TLChannelSource<TLABMsg<Types>> b{pset, "b"};
+  TLChannelSink<TLCMsg<Types>> c{pset, "c"};
+  TLChannelSource<TLDMsg<Types>> d{pset, "d"};
+  TLChannelSink<TLEMsg<Types>> e{pset, "e"};
 
   void bind(TLBundleSource<Types> &ano) {
     ano.bind(*this);
@@ -57,13 +57,13 @@ struct TLBundleSink : sparta::TreeNode {
 };
 
 template<typename Types>
-struct TLBundleSource : sparta::TreeNode {
-  using sparta::TreeNode::TreeNode;
-  TLChannelSource<TLABMsg<Types>> a{ this, "a", "A channel" };
-  TLChannelSink<TLABMsg<Types>> b{ this, "b", "B channel" };
-  TLChannelSource<TLCMsg<Types>> c{ this, "c", "C channel" };
-  TLChannelSink<TLDMsg<Types>> d{ this, "d", "D channel" };
-  TLChannelSource<TLEMsg<Types>> e{ this, "e", "E channel" };
+struct TLBundleSource {
+  sparta::PortSet *pset;
+  TLChannelSource<TLABMsg<Types>> a{pset, "a"};
+  TLChannelSink<TLABMsg<Types>> b{pset, "b"};
+  TLChannelSource<TLCMsg<Types>> c{pset, "c"};
+  TLChannelSink<TLDMsg<Types>> d{pset, "d"};
+  TLChannelSource<TLEMsg<Types>> e{pset, "e"};
 
   void bind(TLBundleSink<Types> &ano) {
     a.bind(ano.a);

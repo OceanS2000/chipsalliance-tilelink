@@ -23,34 +23,42 @@ namespace {
 }
 
 class Slave : public sparta::Unit {
-  friend Simulator;
 public:
-  struct Parameters : sparta::ParameterSet {
-    using sparta::ParameterSet::ParameterSet;
+  class SlaveParameterSet : public sparta::ParameterSet {
+  public:
+    SlaveParameterSet(sparta::TreeNode *n)
+    : sparta::ParameterSet(n)
+    {}
+    
     PARAMETER(uint64_t, seed, 0x19260817, "Seed for generating data")
     PARAMETER(uint64_t, id, 0, "Slave id")
   };
 
-  Slave(sparta::TreeNode *node, const Parameters *params);
+  Slave(sparta::TreeNode *node, const SlaveParameterSet *params);
+
   static const char *name;
 
+  TLBundleSink<>* get_port(){return &port;}
+
 private:
-  std::unique_ptr<TLBundleSink<>> port;
+  TLBundleSink<> port{&unit_port_set_};
+
   sparta::UniqueEvent<> next_d {
     &unit_event_set_, "next_d",
     CREATE_SPARTA_HANDLER(Slave, send_d),
     0 // Slaves immediately respond
   };
 
-  const Parameters *params;
 
   RandGen gen_d;
   std::uniform_int_distribution<uint64_t> dist_d;
+  uint64_t id;
 
   void send_d();
   void accept_d();
   void data_a(const TLABMsg<> &msg);
   void sched_req();
+  
 
   std::optional<Inflight> inflight;
   std::optional<TLABMsg<>> pending_a;

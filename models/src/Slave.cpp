@@ -6,23 +6,22 @@
 
 const char *Slave::name = "slave";
 
-Slave::Slave(sparta::TreeNode *node, const Parameters *params)
-  : sparta::Unit(node, name)
-  , port(std::make_unique<TLBundleSink<>>(node, "port", "Slave port"))
+Slave::Slave(sparta::TreeNode *node, const SlaveParameterSet *params)
+  : sparta::Unit(node)
   , dist_d(std::numeric_limits<uint64_t>::min(), std::numeric_limits<uint64_t>::max())
-  , params(params)
 {
   std::mt19937 gen(params->seed);
   gen_d = RandGen(gen());
 
-  port->d.accept.registerConsumerHandler(CREATE_SPARTA_HANDLER(Slave, accept_d));
-  port->a.data.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Slave, data_a, TLABMsg<>));
+  port.d.accept.registerConsumerHandler(CREATE_SPARTA_HANDLER(Slave, accept_d));
+  port.a.data.registerConsumerHandler(CREATE_SPARTA_HANDLER_WITH_DATA(Slave, data_a, TLABMsg<>));
 
   params->id.ignore();
+  id = params->id;
 }
 
 void Slave::accept_d() {
-  GlobalLogger::put(std::string("slave_") + std::to_string(params->id) +
+  GlobalLogger::put(std::string("slave_") + std::to_string(id) +
                         ".d.accepted",
                     std::to_string(this->getClock()->currentCycle()));
   sparta_assert(inflight.has_value(), "Received accept when there is no outstanding request");
@@ -61,8 +60,8 @@ void Slave::send_d() {
     .event = msg,
   };
   GlobalLogger::put_json(
-      std::string("slave_") + std::to_string(params->id) + ".d.propose", ev);
-  port->d.data.send(msg);
+      std::string("slave_") + std::to_string(id) + ".d.propose", ev);
+  port.d.data.send(msg);
 }
 
 void Slave::data_a(const TLABMsg<> &msg) {
@@ -71,7 +70,7 @@ void Slave::data_a(const TLABMsg<> &msg) {
     .event = msg,
   };
   GlobalLogger::put_json(
-      std::string("slave_") + std::to_string(params->id) + ".a.proposed", ev);
+      std::string("slave_") + std::to_string(id) + ".a.proposed", ev);
   sparta_assert(!pending_a.has_value(), "Received A when there is already a pending A");
   pending_a = msg;
   if(!this->inflight.has_value()) this->sched_req();
@@ -88,9 +87,9 @@ void Slave::sched_req() {
   };
 
   pending_a.reset();
-  GlobalLogger::put(std::string("slave_") + std::to_string(params->id) +
+  GlobalLogger::put(std::string("slave_") + std::to_string(id) +
                         ".a.accept",
                     std::to_string(this->getClock()->currentCycle()));
-  port->a.accept.send();
+  port.a.accept.send();
   next_d.schedule();
 }
